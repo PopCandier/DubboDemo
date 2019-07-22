@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://dubbo.apache.org/schema/dubbo"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans        http://www.springframework.org/schema/beans/spring-beans-4.3.xsd        http://dubbo.apache.org/schema/dubbo        http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
+
+    <!--
+        发布的服务应用名称，最好名字唯一
+    -->
+    <dubbo:application name="pay-service"/>
+
+    <!--注册中心，dubbo支持多个注册中心实现，包括zk，还有其他等
+        会需要curator的包 导入两个
+    -->
+    <dubbo:registry address="zookeeper://192.168.255.102:2182" id="rg1"/>
+    <!--倘若有多个注册中心-->
+    <!--<dubbo:registry address="zookeeper://192.168.255.102:2183" id="rg2"/>-->
+
+    <!--通过什么协议，这里有dubbo和webService等多种可以选择-->
+    <dubbo:protocol name="webservice" port="8080" server="jetty" />
+    <dubbo:protocol name="dubbo" port="20880" />
+    <!--
+        服务的接口
+    -->
+    <dubbo:service registry="rg1" interface="com.pop.dubbo.IPayService" ref="payService"
+        protocol="webservice,dubbo"/>
+    <!--<dubbo:service registry="rg2" interface="com.pop.dubbo.IQueryService" ref="queryService"/>-->
+    <dubbo:service registry="rg1" interface="com.pop.dubbo.IQueryService" ref="queryService" protocol="dubbo"/>
+
+    <!--具体实现-->
+    <bean id="payService" class="com.pop.dubbo.PayServiceImpl"/>
+    <bean id="queryService" class="com.pop.dubbo.QueryServiceImpl"/>
+</beans>

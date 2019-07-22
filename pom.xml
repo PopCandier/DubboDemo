@@ -6,7 +6,13 @@
 
   <groupId>com.pop.dubbo</groupId>
   <artifactId>com.dubboDemo</artifactId>
+  <packaging>pom</packaging>
   <version>1.0-SNAPSHOT</version>
+  <modules>
+    <module>pay-api</module>
+    <module>pay-provider</module>
+    <module>order-service</module>
+  </modules>
 
   <name>com.dubboDemo</name>
   <!-- FIXME change it to the project's website -->
@@ -26,6 +32,67 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <!--项目可能的依赖，然后我们可以根据我们的需求去导入这些依赖
+    具体到哪个模块进行依赖，实现jar包的统一管理
+  -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.pop.dubbo</groupId>
+        <version>1.0-SNAPSHOT</version>
+        <artifactId>pay-api</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.dubbo</groupId>
+        <artifactId>dubbo</artifactId>
+        <version>2.7.2</version>
+      </dependency>
+      <!--日志乱码的解决-->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.7.25</version>
+      </dependency>
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>1.2.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-framework</artifactId>
+        <version>4.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-recipes</artifactId>
+        <version>4.0.0</version>
+      </dependency>
+      <!-- webService 依赖-->
+      <dependency>
+        <groupId>org.apache.cxf</groupId>
+        <artifactId>cxf-rt-frontend-simple</artifactId>
+        <version>3.3.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.cxf</groupId>
+        <artifactId>cxf-rt-transports-http</artifactId>
+        <version>3.3.2</version>
+      </dependency>
+      <!--由于是webService是http协议，所以需要web容器解析-->
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-server</artifactId>
+        <version>9.4.18.v20190429</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlet</artifactId>
+        <version>9.4.18.v20190429</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
