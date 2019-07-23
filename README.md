@@ -66,7 +66,7 @@ dubbo中我们使用zk作为例子，我们可以看到在客户端而言，如�
 
 这个的东西，所以，我们可以使用zk，来使用来完成注册中心，这样我们就可以不用写，那么记录那么复杂的url了。当我们的服务器启动的时候，就会自动往zk去注册临时节点。
 
-![1563807083324](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1563807083324.png)
+![1563807083324](https://github.com/PopCandier/DubboDemo/tree/master/img/1563807083324.png)
 
 ```xml
 <dubbo:registry address="zookeeper://192.168.255.102:2182"/>
@@ -162,13 +162,13 @@ Dubbo不止是一个服务治理的框架，个人认为更是一种生态，一
 
 因为这个项目，只放了一个服务，所以可以看到区别
 
-![1563809851529](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1563809851529.png)
+![1563809851529](https://github.com/PopCandier/DubboDemo/tree/master/img/1563809851529.png)
 
 同时，由于是webService，所以我们在地址上输入
 
 http://localhost:8080/com.pop.dubbo.IPayService?wsdl  可以获得以下信息。
 
-![1563809998684](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1563809998684.png)
+![1563809998684](https://github.com/PopCandier/DubboDemo/tree/master/img/1563809998684.png)
 
 最后就是，之前说过的同一个端口的多协议，其实也可以用，不过这种做法兼容比较多。
 
@@ -176,7 +176,7 @@ http://localhost:8080/com.pop.dubbo.IPayService?wsdl  可以获得以下信息�
 <dubbo:service registry="rg1" interface="com.pop.dubbo.IPayService" ref="payService" protocol="webservice,dubbo"/>
 ```
 
-![1563810327746](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1563810327746.png)
+![1563810327746](https://github.com/PopCandier/DubboDemo/tree/master/img/1563810327746.png)
 
 如果你想要知道更多的rpc协议，可以去github上找到dubbo项目的rpc包下查看具体支持
 
