@@ -180,6 +180,78 @@ http://localhost:8080/com.pop.dubbo.IPayService?wsdl  可以获得以下信息�
 
 如果你想要知道更多的rpc协议，可以去github上找到dubbo项目的rpc包下查看具体支持
 
+### Dubbo 服务治理的体现
+
+springboot+dubbo
+
+原先的dubbo项目，同样被整合到一个项目中去。
+
+这一次，我们介绍一下常见的Dubbo的常见配置
+
+开箱即用，准备stater包
+
+```xml
+<dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-spring-boot-starter</artifactId>
+            <version>2.7.1</version>
+        </dependency>
+```
+
+此外，我还需要dubbo本身的jar包，starter只是提供自动装配
+
+```xml
+ <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo</artifactId>
+            <version>2.7.2</version>
+        </dependency>
+        <!--配置zk-->
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-framework</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+```
+
+在新建立的项目中，我们不需要任何的spring依赖，接着我们实现springboot模式下的服务
+
+```java
+import org.apache.dubbo.config.annotation.Service;
+
+/**
+ * @author Pop
+ * @date 2019/7/25 0:05
+ */
+@Service //注意这里的有所不同，这是dubbo中的注解，用于标记一个服务
+public class SayHelloServiceImplSpringBoot implements ISayHelloService {
+    @Override
+    public String sayHello(String call) {
+        return "Hello Dubbo :"+call;
+    }
+}
+```
+
+然后，我们还需要再配置些dubbo的参数
+
+```properties
+#dubbo.protocol.name = dubbo
+#dubbo.protocol.prot = 20880
+# 写@Service的路径，不写就无法自动注册到zookeeper节点。
+dubbo.scan.base-packages=com.pop.springboot.dubbo.springbootdubbo
+dubbo.application.name=springboot-dubbo
+dubbo.registry.address=zookeeper://192.168.255.102:2182
+```
+
+接着我们启动springboot，这个就完成了服务的发布，然后再节点上就可以看到了
+
+![1563985964121](https://github.com/PopCandier/DubboDemo/blob/master/img/1563985964121.png)
+
 ### Dubbo 源码之内核
 
 
