@@ -246,19 +246,306 @@ public class SayHelloServiceImplSpringBoot implements ISayHelloService {
 dubbo.scan.base-packages=com.pop.springboot.dubbo.springbootdubbo
 dubbo.application.name=springboot-dubbo
 dubbo.registry.address=zookeeper://192.168.255.102:2182
+
+#集群节点的写法
+dubbo.registry.address=zookeeper://192.168.50.132:2181？backup=192.168.50.133:2181,192.168.50.134:2181
 ```
 
 接着我们启动springboot，这个就完成了服务的发布，然后再节点上就可以看到了
 
 ![1563985964121](https://github.com/PopCandier/DubboDemo/blob/master/img/1563985964121.png)
 
-### Dubbo 源码之内核
+接着我们创建客户端的spring-boot工程，dubbo-client工程
+
+添加我们自定义的依赖还有zk的客户端jar包和dubbojar包。
+
+```java
+/**
+ * @author Pop
+ * @date 2019/7/25 22:20
+ */
+@RestController
+public class DubboController {
+
+    /**
+     * 这里的reference注解是dubbo的注解
+     * 用于注入服务
+     *
+     * 也是基于dubbo注册中心zk获取，所以还需要到propertis配置
+     */
+    @Reference
+    ISayHelloService sayHelloService;
+
+    @GetMapping("/sayhello")
+    public String sayHello(){
+        return sayHelloService.sayHello("Pop");
+    }
+}
+```
+
+配置
+
+```properties
+dubbo.scan.base-packages=com.pop.dubbo.dubboclient
+dubbo.application.name=springboot-dubbo-client
+dubbo.registry.address=zookeeper://192.168.255.102:2182
+```
+
+接下来，我们来讲解一下Dubbo中的服务治理，dubbo可以扩展性已经非常好，我们在之前已经见过了，dubbo已经将负载均衡，熔断，降级做了很好的封装，我们只要调用就好了。
+
+我们将来讲解一下dubbo的负载均衡算法，随机算法，但是这里的随机并不是真正意义上的随机，而是权重(weight)随机
+
+#### 负载均衡
+
+----
 
 
 
-### 分析Dubbo 源码之服务发布和注册
+```java
+@Service(loadbalance = "random")//随机算法，请注意这是在服务端添加的，由dubbo做
+//分发
+public class SayHelloServiceImplSpringBoot implements ISayHelloService {
+    @Override
+    public String sayHello(String call) {
+        //为了好演示，这边打印出来
+        System.out.println("请求发来了："+call);
+        return "Hello Dubbo :"+call;
+    }
+}
+```
+
+为了测试负载均衡，我们需要多启动一些服务，来模拟请求的分发。
+
+![1564065633756](https://github.com/PopCandier/DubboDemo/blob/master/img/1564065633756.png)
+
+因为是启动两个服务，来模拟集群，所以我们需要拆分一下端口，避免冲突，因为一个dubbo端口是20880，现在改成20881
+
+![1564065840445](https://github.com/PopCandier/DubboDemo/blob/master/img/1564065840445.png)
+
+这里也可以清楚的看出，出现了两个协议，说明两个dubbo服务都注册成功。
+
+![1564066482924](https://github.com/PopCandier/DubboDemo/blob/master/img/1564066482924.png)
+
+![1564066504635](https://github.com/PopCandier/DubboDemo/blob/master/img/1564066504635.png)
+
+可以将，相对来说是比较均衡了，这一种权重随机，例如A占3，B占有5，C占有2，接着dubbo会生成一定的随机值，落到这三个不同的区间内，并从本地缓存得到地址，dubbo会请求目的的地址。
+
+```java
+@Service(loadbalance = "random",weight = 6)
+public class SayHelloServiceImplSpringBoot implements ISayHelloService {
+    @Override
+    public String sayHello(String call) {
+        //为了好演示，这边打印出来
+        System.out.println("请求发来了："+call);
+        return "Hello Dubbo :"+call;
+    }
+}
+/*
+意味着这个服务的权重占有60%，也有60%的概率落到这里。
+*/
+```
+
+* 最小活跃
+  * 如果某一台机器性能很高，那么意味着他的消化能力越高，数据堆积能力越少，他的活跃度越低，负载率越高，权重越高，也就是吞吐量。
+* 权重轮询
+  * 权重则 A B C
+* 一致性hash
+  * hash环
+
+更多的负载均衡算法，可以在最开头的官网查看。
+
+当然，不光是可以在服务端可以配置负载均衡，在客户端也可以配置，虽然没人会这么做，但是如果真的有这样的写法，优先使用客户端的。
+
+```java
+@RestController
+public class DubboController {
+
+    /**
+     * 这里的reference注解是dubbo的注解
+     * 用于注入服务
+     *
+     * 也是基于dubbo注册中心获取，所以还需要到propertis配置
+     */
+    @Reference(loadbalance = "random")
+    ISayHelloService sayHelloService;
+
+    @GetMapping("/sayhello")
+    public String sayHello(){
+        return sayHelloService.sayHello("Pop");
+    }
 
 
+}
+```
 
-### 分析Dubbo源码
+都会带到注册中心的value值，并且由dubbo解析。在此之上，dubbo还支持`方法级别`的配置，这是有限度最高的，如果你配置了，会优先应用这个，初次之外，如果你的客户端和服务端都配置了相同的配置，依旧优先听客户端的，`一切以客户为主`。
+
+#### 容错策略
+
+----
+
+远程通信，有很多不确定性，也就是未知性，可能成功或者失败。
+
+也就是容忍错误的能力，当你出错后，会提供响应方案。
+
+Dubbo提供了6钟容错概率。
+
+我们可能有以下种需求。
+
+* 重试
+  * 再试试也许会成功
+* 不希望重试
+  * 快速失败
+* 失败后
+  * 可以记录一个日志。
+
+Dubbo中的重试。`failover`默认的情况，三次，但是retries=2加上自己等于三次
+
+快速失败。`failfast`
+
+失败后，记录日志，`failback`
+
+失败安全，出错以后，直接忽略，`failsafe`
+
+广播出去，并行调用多个服务，有一个成功也算成功，`forking`
+
+....
+
+配置直接忽略错误的，容错策略。
+
+```java
+@Service(loadbalance = "random",weight = 6,cluster = "failsafe")
+public class SayHelloServiceImplSpringBoot implements ISayHelloService {
+    @Override
+    public String sayHello(String call) {
+        //为了好演示，这边打印出来
+        System.out.println("请求发来了："+call);
+        return "Hello Dubbo :"+call;
+    }
+}
+```
+
+#### 服务降级
+
+----
+
+* 异常降级
+  * 当你`非关键`的功能模块，出现了异常，访问错误的情况，你可以选择一个`保底`的方法返回，也可以是个静态页面，当然你也可以直接通错错误。
+* 限流降级
+  * 当的服务能够处理的量超过某一个阈值的时候，将会采取什么策略，例如线程池，当线程数达到一定阈值的时候，可以选择拒绝策略，也就是我们常见的`服务器繁忙，请稍候再试`
+* 熔断降级
+  * 例如10s之内，超过50%的请求响应时间达到了5s，这可能会触发我们设置好的熔断降级。
+
+Dubbo中的`Mock`机制
+
+请注意，这里的`Mock`应该是写在客户端这边，也就是请求方这边，意思就是如果你请求失败，你有个预备方案可以供自己使用。
+
+首先我们创建一个类，这个类**必须**实现我们需要请求的借口，这样才能完成兜底的效果。
+
+```java
+/**
+ * @author Pop
+ * @date 2019/7/25 23:38
+ */
+public class SayHelloServiceMock implements ISayHelloService {
+    @Override
+    public String sayHello(String call) {
+        return " 服务器发生异常，返回兜底数据。";
+    }
+}
+```
+
+然后在Controller中的请求借口增加配置。
+
+```java
+@RestController
+public class DubboController {
+   //请注意，这里要求写降级策略的全路径
+    @Reference(loadbalance = "random",mock ="com.pop.dubbo.dubboclient.SayHelloServiceMock")
+    ISayHelloService sayHelloService;
+
+    @GetMapping("/sayhello")
+    public String sayHello() {
+        return sayHelloService.sayHello("Pop");
+    }
+}
+```
+
+这里，为了模拟请求失败，我们添加上额外的设置。
+
+```java
+@RestController
+public class DubboController {
+    /**
+     * 这里的reference注解是dubbo的注解
+     * 用于注入服务
+     *
+     * 也是基于dubbo注册中心获取，所以还需要到propertis配置
+     *
+     * timeout 表示，这个请求要在 1 毫秒内请求完成，如果网络出现阻塞或者波动是很容易失败的
+     * cluster 容错策略 如果你请求失败了，那希望你快点失败算了，因为他的默认是failover 重试，我们不希望他重试
+     */
+    @Reference(loadbalance = "random",timeout = 1,cluster = "failfast",mock ="com.pop.dubbo.dubboclient.SayHelloServiceMock")
+    ISayHelloService sayHelloService;
+
+    @GetMapping("/sayhello")
+    public String sayHello() {
+        return sayHelloService.sayHello("Pop");
+    }
+}
+```
+
+为了让他请求，服务器返回一定超过1毫秒，我们强制在服务器设置睡1秒
+
+```java
+@Service(loadbalance = "random",cluster = "failsafe")
+public class SayHelloServiceImplSpringBoot implements ISayHelloService {
+    @Override
+    public String sayHello(String call) {
+        //为了好演示，这边打印出来
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("请求发来了："+call);
+        return "Hello Dubbo :"+call;
+    }
+}
+```
+
+然后我们启动服务，他告诉我们出现了问题，
+
+![1564069989159](https://github.com/PopCandier/DubboDemo/blob/master/img/1564069989159.png)
+
+#### 补充几点
+
+----
+
+有一个这种情况，就是如果我的目标服务没有启动，我发起了请求，很明显会报错，所以dubbo中，我们可以为这种情况增加配置第一个是在配置文件中配置。
+
+```properties
+dubbo.registry.check=false
+```
+
+**请注意**，这里的false并不是代表不检查，而是表示，当发现注册中心服务不可用的时候，会在等会发起**重试**。
+
+如果你配置在接口层面。
+
+```java
+@Reference(loadbalance = "random",timeout = 1,
+            cluster = "failfast",mock ="com.pop.dubbo.dubboclient.SayHelloServiceMock",
+        check = false)
+    ISayHelloService sayHelloService;
+```
+
+这里的false意味着，不检查，这个服务不可用是可以被允许的，后面会再次重新连接。
+
+此外，还有一个关于主机绑定的问题。有的时候你可能会发现，你发布的dubbo地址不是你想要的，甚至是个很奇怪的域名，所以你可以自己指定。
+
+```
+dubbo.protocol.host=192.168.255.99
+```
+
+但是要注意的是，默认Dubbo会取你本地ip地址。随便设置可能会导致启动报错。请按照需求设置你的ip地址。
 
