@@ -549,3 +549,169 @@ dubbo.protocol.host=192.168.255.99
 
 但是要注意的是，默认Dubbo会取你本地ip地址。随便设置可能会导致启动报错。请按照需求设置你的ip地址。
 
+### Dubbo核心
+
+#### SPI扩展点
+
+原生jdk的spi实现，参考3.5.21
+
+dubbo中的扩展点。
+
+* 自适应扩展点
+* 激活扩展点
+* 静态扩展点
+
+都能被扩展的借口，必须要有这样的标记->@SPI() 这是dubbo自定义的注解
+
+同时@SPI("value")，表示该扩展点的默认实现
+
+#### 静态扩展点
+
+先上一个实例
+
+```java
+package com.pop.dubbo;
+
+import org.apache.dubbo.common.URL;
+import org.apache.dubbo.rpc.Exporter;
+import org.apache.dubbo.rpc.Invoker;
+import org.apache.dubbo.rpc.Protocol;
+import org.apache.dubbo.rpc.RpcException;
+
+/**
+ * @author Pop
+ * @date 2019/7/28 21:50
+ */
+public class MyProcol implements Protocol {
+    @Override
+    public int getDefaultPort() {
+        return 999;
+    }
+    //暴露服务
+    @Override
+    public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
+        return null;
+    }
+
+    @Override
+    public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
+        return null;
+    }
+
+    @Override
+    public void destroy() {
+
+    }
+}
+
+```
+
+这个类似于我们实现自己的协议，和dubbo协议一样，我们可以自己定义自己服务的端口还有暴露出去的类似之类的东西，
+
+然后，在resource目录下，创建文件路径
+
+`/META-INF/dubbo/org.apache.dubbo.rpc.Protocol`
+
+路径不能写错，然后写入内容，内容为键值对，前面为自定义名称，后面为实现类
+
+```properties
+popProtocol = com.pop.dubbo.MyProcol
+```
+
+测试一下。
+
+```java
+public static void main( String[] args )
+    {
+
+//        System.out.println( "Hello World!" );
+        Protocol protocol=ExtensionLoader.getExtensionLoader(Protocol.class).getExtension("popProtocol");
+        System.out.println(protocol.getDefaultPort());
+    // 999 被dubbo spi被识别到了
+    }
+```
+
+load指定路径下对应SPI扩展点的实现。
+
+#### 依赖注入
+
+与spring中的依赖注入不一样，spring支持构造器注入，set注入，接口注入
+
+dubbo只支持set注入。
+
+如果当前的扩展点(类似我们之前构建的东西)中依赖其他扩展点，则需要进行依赖注入。
+
+#### 自适应扩展点
+
+了解了依赖注入后，我们再谈依赖注入。
+
+@Adaptive
+
+一种是加在类上（提前写好了一个自适应的扩展点，就好像是下面Compiler实现的
+
+自适应的扩展点，他会根据条件去创建不同的实现，所以适配。）。
+
+```java
+ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension()
+```
+
+```java
+@Adaptive //适配是需要带的注解。
+public class AdaptiveCompiler implements Compiler {
+
+    private static volatile String DEFAULT_COMPILER;
+
+    public static void setDefaultCompiler(String compiler) {
+        DEFAULT_COMPILER = compiler;
+    }
+
+    @Override
+    public Class<?> compile(String code, ClassLoader classLoader) {
+        Compiler compiler;
+        ExtensionLoader<Compiler> loader = ExtensionLoader.getExtensionLoader(Compiler.class);
+        String name = DEFAULT_COMPILER; // copy reference
+        if (name != null && name.length() > 0) {
+            //根据需求，会返回jdkCompiler 或者 javasistCompiler
+            compiler = loader.getExtension(name);
+        } else {
+            compiler = loader.getDefaultExtension();
+        }
+        return compiler.compile(code, classLoader);
+    }
+
+}
+
+public static void main( String[] args )
+    {
+
+//        System.out.println( "Hello World!" );
+//        Protocol protocol=ExtensionLoader.getExtensionLoader(Protocol.class).getExtension("popProtocol");
+//        System.out.println(protocol.getDefaultPort());
+
+        Compiler compiler = ExtensionLoader.getExtensionLoader(Compiler.class).getAdaptiveExtension();
+        System.out.println(compiler.compile());//org.apache.dubbo.common.compiler.support.AdaptiveCompiler@50134894
+    }
+```
+
+还一种是方法。
+
+在方法级别上也可以加上这个注解，我们可以看下Protocol的exprot接口上有这个方法。
+
+```java
+ @Adaptive
+    <T> Exporter<T> export(Invoker<T> invoker) throws RpcException;
+```
+
+与类级别不同的是，类会找到具体实现去返回实例，但是在方法级别上，是没有具体实现类的，因为他会返回一个代理对象，最后调用代理对象对应的方法。
+
+```java
+String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
+//生成动态代理的主要方法。然后就加载到虚拟机中，以供使用
+```
+
+#### 激活扩展点
+
+回想一下springboot中的conditional注解。
+
+
+

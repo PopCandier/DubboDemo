@@ -12,6 +12,7 @@
     <module>pay-api</module>
     <module>pay-provider</module>
     <module>order-service</module>
+      <module>practice-service</module>
   </modules>
 
   <name>com.dubboDemo</name>
