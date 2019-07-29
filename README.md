@@ -713,5 +713,31 @@ String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate()
 
 回想一下springboot中的conditional注解。
 
+```java
+URL url = new URL("","",0);
+        url=url.addParameter("cache","cache");
+        List<Filter> list=ExtensionLoader.getExtensionLoader(Filter.class)
+                .getActivateExtension(url,"cache");
 
+        System.out.println(list.size());
+```
+
+需要选择，响应的激活的value，就可以激活这个过滤器
+
+```java
+@Activate(group = {CONSUMER, PROVIDER}, value = CACHE_KEY)
+public class CacheFilter implements Filter {
+    
+    //...
+    
+public interface FilterConstants {
+    String CACHE_KEY = "cache";
+
+    String VALIDATION_KEY = "validation";
+}
+```
+
+包含的时候，将会激活。group表示客户端还是服务器端生效。也就意味着会根据你传进去的参数，来初始化，来选择加入什么样的扩展点。
+
+[Dubbo 服务发布和注册]: ./README1.md
 
