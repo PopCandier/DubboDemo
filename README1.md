@@ -204,3 +204,36 @@ private void doExportUrls() {
 ```
 
 等待补充..
+
+
+
+#### 2019/7/30的总结
+
+服务器发布做了哪些事情
+
+* 基于Spring进行解析配置文件存储到了config中
+* 在这过程中含有大量的逻辑判断，主要是为了保证配置信息的安全性
+* 由于dubbo是靠url驱动，所以在这一步会组装url
+  * registry:// ->zookeeper:// -> dubbo:// -> injvm
+* 构建一个Invoker（动态代理）
+  * 用于发起远程调用的封装，dubbo在这其中做了很多层包装
+* RegistryProtocl.export
+* 拥有很多的wrapper，去增强上面的类，用于filter/qos(质量检测)/listener
+* DubboProtocol.export 发布服务
+* 将invoker保存到集合中，并开启一个nettyserver 去监听
+* 扩展点的依赖注入->injectXxx。
+
+一切的开始，ServiceBean.onApplicationEvent(){
+
+​	onApplicationEvent(){
+
+​		export....
+
+​	}
+
+}
+
+在这过程中 扩展点的应用非常多，
+
+* AdaptiveExtention
+* Extension
