@@ -50,6 +50,10 @@ public class DubboNamespaceHandler extends NamespaceHandlerSupport {
 
 解析配置。
 
+dubbo依靠spring的生态，将自己的配置信息生成bean，并托管给了spring，从上面可以看到的是，通过DubboBeanDefintionParser的类将xml中的配置，全部解析成了bean。
+
+
+
 建议去看一下ServiceBean里的内容，和Spring有关的扩展。
 
 ```java
@@ -237,3 +241,10 @@ private void doExportUrls() {
 
 * AdaptiveExtention
 * Extension
+
+
+
+#### Invoker
+
+一个媒介
+
