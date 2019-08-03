@@ -488,7 +488,7 @@ private static final Protocol protocol = ExtensionLoader.getExtensionLoader(Prot
 
 所以我从dubbo-config里面找一下这个的实现类是什么。被代理的类Protocol$Adaptive中其实也就是再次调用了静态扩展点，我们可以看到这里其实也就是调用了key:value的value的实现类，所以我们来到这里的
 
-![1564676582672](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1564676582672.png)
+![1564676582672](https://github.com/PopCandier/DubboDemo/blob/master/img/1564676582672.png)
 
 然后我们找到了这个的关于export的实现类。接下来在这里面实现服务的`发布和注册`。
 
@@ -560,7 +560,7 @@ private static final Protocol protocol = ExtensionLoader.getExtensionLoader(Prot
 
 所以我们回到这里。
 
-![1564678152181](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1564678152181.png)
+![1564678152181](https://github.com/PopCandier/DubboDemo/blob/master/img/1564678152181.png)
 
 **但是！**情况和我们想象的有点不一样，那就是这个`protocol`并没有初始化
 
@@ -589,7 +589,7 @@ public interface Protocol {
 
 在之前扩展点的时候，会有一个穿插在中间的jnjectXX()方法。那么问题来了，这个protocol到底是个什么呢？其实这个protocol并不是单纯的DubboProtocol，而是做了多层包装。
 
-![1564679003010](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1564679003010.png)
+![https://github.com/PopCandier/DubboDemo/blob/master/img/1564679003010.png)
 
 所以实际上，protocol应该是这个样子的。
 
@@ -755,7 +755,7 @@ private T createExtension(String name) {
 
   * 增加过滤器功能，他有一个责任链，将所有过滤组成成功后返回给dubboProtocol
 
-  * ![1564681092594](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1564681092594.png)
+  * ![1564681092594]https://github.com/PopCandier/DubboDemo/blob/master/img/1564681092594.png)
 
   * 调用相对的exprot方法
 
