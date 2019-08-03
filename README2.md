@@ -617,3 +617,10 @@ public DubboInvoker(Class<T> serviceType, URL url, ExchangeClient[] clients, Set
 `ExchangeClient[]`的数组。
 
 其它的，客户端会通过ZookeeperReigstry去订阅(subsribe)服务端各个的节点的时间。并且在接下的发布的服务下面，进行通知(notify)。
+
+通信也就是notify调用的两种情况
+
+* 第一次启动初始化时候
+* 服务地址发生变化的时候
+
+一旦发生变化，将会重新refersh我们保存了的Invokers的map地址，也就是重新再次建立invoker，保证最新的节点显示。对于以上例子就是DubboInvoker
