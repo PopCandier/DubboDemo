@@ -609,3 +609,11 @@ public DubboInvoker(Class<T> serviceType, URL url, ExchangeClient[] clients, Set
 ```
 
 代理对象也就完成。
+
+### 客户端的总结
+
+相比服务端的不同，保存在服务的Invoker中保存了多个服务端的连接，那就意味着每个Invoker都存在一个
+
+`ExchangeClient[]`的数组。
+
+其它的，客户端会通过ZookeeperReigstry去订阅(subsribe)服务端各个的节点的时间。并且在接下的发布的服务下面，进行通知(notify)。
