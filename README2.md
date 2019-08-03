@@ -287,7 +287,7 @@ private <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type
     }
 ```
 
-![1564823442116](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1564823442116.png)
+![1564823442116](https://github.com/PopCandier/DubboDemo/blob/master/img/1564823442116.png)
 
 所以，这个invoker返回的是应该是被
 
@@ -336,7 +336,7 @@ RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
     
 ```
 
-![1564824636203](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1564824636203.png)
+![1564824636203](https://github.com/PopCandier/DubboDemo/blob/master/img/1564824636203.png)
 
 static不用注册中心的情况，register从目标服务获得地址。类似`List<String> urls`
 
@@ -510,7 +510,7 @@ private void refreshInvoker(List<URL> invokerUrls) {
 
 在`RegistryDirectory`的声明
 
-![1564826583870](C:\Users\99405\AppData\Roaming\Typora\typora-user-images\1564826583870.png)
+![1564826583870](https://github.com/PopCandier/DubboDemo/blob/master/img/1564826583870.png)
 
 是不是很像是服务端的DubboProtocol的exportMap，基本是一样的。
 
