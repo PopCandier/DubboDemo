@@ -6,6 +6,14 @@
 
 Dubbo 的官网  http://dubbo.apache.org
 
+
+
+[Dubbo 服务端发布服务源码分析](https://github.com/PopCandier/DubboDemo/blob/master/README1.md)
+
+[Dubbo 客户端代理服务源码分析](https://github.com/PopCandier/DubboDemo/blob/master/README2.md)
+
+[Dubbo 通信源码分析](https://github.com/PopCandier/DubboDemo/blob/master/README2.md)
+
 ### 分析Dubbo服务治理技术
 
 动态代理，和序列化与反序列化的使用
