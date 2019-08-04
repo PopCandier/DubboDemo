@@ -608,7 +608,152 @@ public DubboInvoker(Class<T> serviceType, URL url, ExchangeClient[] clients, Set
     }
 ```
 
+很明显，构建对象的通信的部分大致完成，但是代理对象还是没有生成。所以我们回到`ReferenceConfig`的init方法中
+
+```java
+public synchronized T get() {
+        checkAndUpdateSubConfigs();
+
+        if (destroyed) {
+            throw new IllegalStateException("The invoker of ReferenceConfig(" + url + ") has already destroyed!");
+        }
+        if (ref == null) {
+            init();//进入
+        }
+        return ref;
+    }
+```
+
+```java
+private void init() {
+        //....
+        map.put(REGISTER_IP_KEY, hostToRegistry);
+
+        ref = createProxy(map);//进入
+
+        String serviceKey = URL.buildKey(interfaceName, group, version);
+        ApplicationModel.initConsumerModel(serviceKey, buildConsumerModel(serviceKey, attributes));
+        initialized = true;
+    }
+```
+
+```java
+private T createProxy(Map<String, String> map) {
+        //...
+		//之前是从这里进去的，从这里出来我们的invoker已经被构建了三层包装并且invoker中保存了用于通信的client数组
+            if (urls.size() == 1) {
+                invoker = REF_PROTOCOL.refer(interfaceClass, urls.get(0));
+            } else {
+              //..... 拉到最下面，我们可以看到这里有一个返回代理对象的方法
+        // create service proxy
+        return (T) PROXY_FACTORY.getProxy(invoker);
+    }
+```
+
+`PROXY_FACTORY`是一个自适应扩展点，我们可以看到。
+
+```java
+private static final ProxyFactory PROXY_FACTORY = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
+```
+
+并且对应ProxyFactory的扩展点的实现，也看到spi的实现。
+
+```properties
+stub=org.apache.dubbo.rpc.proxy.wrapper.StubProxyFactoryWrapper
+jdk=org.apache.dubbo.rpc.proxy.jdk.JdkProxyFactory
+javassist=org.apache.dubbo.rpc.proxy.javassist.JavassistProxyFactory
+```
+
+那其实，我们用的是javassist的代理，所以我们选择这个。
+
+```java
+public class JavassistProxyFactory extends AbstractProxyFactory {
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getProxy(Invoker<T> invoker, Class<?>[] interfaces) {
+        //进入getProxy方法
+        return (T) Proxy.getProxy(interfaces).newInstance(new InvokerInvocationHandler(invoker));
+    }
+
+    @Override
+    public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
+        // TODO Wrapper cannot handle this scenario correctly: the classname contains '$'
+        final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);
+        return new AbstractProxyInvoker<T>(proxy, type, url) {
+            @Override
+            protected Object doInvoke(T proxy, String methodName,
+                                      Class<?>[] parameterTypes,
+                                      Object[] arguments) throws Throwable {
+                return wrapper.invokeMethod(proxy, methodName, parameterTypes, arguments);
+            }
+        };
+    }
+
+}
+```
+
+```java
+ public static Proxy getProxy(Class<?>... ics) {
+        return getProxy(ClassUtils.getClassLoader(Proxy.class), ics);
+    }
+    
+    
+ public static Proxy getProxy(ClassLoader cl, Class<?>... ics) {
+     //....
+       //上面都是在拼接字符串，用于生成代理类的class
+            clazz.getField("methods").set(null, methods.toArray(new Method[0]));
+
+            // create Proxy class.
+            String fcn = Proxy.class.getName() + id;
+            ccm = ClassGenerator.newInstance(cl);
+            ccm.setClassName(fcn);
+            ccm.addDefaultConstructor();
+            ccm.setSuperClass(Proxy.class);
+            ccm.addMethod("public Object newInstance(" + InvocationHandler.class.getName() + " h){ return new " + pcn + "($1); }");
+            Class<?> pc = ccm.toClass();
+     //创建实例
+            proxy = (Proxy) pc.newInstance();
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        } finally {
+            // release ClassGenerator
+            if (ccp != null) {
+                ccp.release();
+            }
+            if (ccm != null) {
+                ccm.release();
+            }
+            synchronized (cache) {
+                if (proxy == null) {
+                    cache.remove(key);
+                } else {
+                    cache.put(key, new WeakReference<Proxy>(proxy));
+                }
+                cache.notifyAll();
+            }
+        }
+        return proxy;
+    }
+```
+
 代理对象也就完成。
+
+此外的，当我们调用的时候，其实也就是使用了代理对象里面的这样的方法。
+
+```java
+public java.lang.String sayHello(java.lang.String arg0){
+	Object[] args = new Object[1];
+	args[0] = ($w)$1;
+    //InvokerInvocationHandler(MockClusterWrapper(FailoverCluster(direcotry)))
+    //类似一个这样的东西
+	Object ret = handler.invoke(this, methods[0], args);
+ return (java.lang.String)ret;
+}
+
+```
 
 ### 客户端的总结
 
